@@ -23,3 +23,23 @@ Hide YouTube videos that don't match your duration range or contain blocked keyw
 ## Troubleshooting
 - If filtering seems off after navigation, toggle a setting in the popup to trigger a refresh.
 - Make sure the extension is enabled and you’re on `youtube.com`.
+
+## Project Structure
+youtube-filter/
+├─ assets/
+│  ├─ icon128.png
+│  ├─ icon16.png
+│  └─ icon48.png
+├─ popup/
+│  ├─ popup.css
+│  ├─ popup.html
+│  └─ popup.js
+├─ src/
+│  ├─ content.js
+│  ├─ utils.js
+│  ├─ dom.js
+│  ├─ filter.js
+│  ├─ observer.js
+│  └─ storage.js
+├─ manifest.json
+└─ README.md
