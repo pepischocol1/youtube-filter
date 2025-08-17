@@ -112,7 +112,7 @@
         }
 
         console.log(
-          `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED GANDALF' : '⛔️ HIDDEN GANDALF') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
+          `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED DEVIL' : '⛔️ HIDDEN DEVIL') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
           (tooShort ? ` | ⏱ under ${settings.minDurationMinutes} min` : '') +
           (tooLong ? ` | ⏱ over ${settings.maxDurationMinutes} min` : '') +
           (titleMatch ? ` | 📝 matched keyword` : '') +
@@ -138,30 +138,32 @@
   const debouncedScan = () => {
     clearTimeout(scanTimeout);
     scanTimeout = setTimeout(() => {
-      resetStyles(); // Reset all styles before scanning
+      resetStyles();
       scanVideos();
-    }, 250); // 250ms delay to let DOM settle
+    }, 250);
   };
 
   // Handle topic switch or major content change
   const handleContentChange = () => {
     resetStyles();
-    scanVideos(); // Immediate scan for initial elements
-    setTimeout(scanVideos, 500); // Additional scan for partial loads
+    scanVideos();
+    setTimeout(scanVideos, 500);
   };
 
   // Load initial settings
   chrome.storage.sync.get(['ytf_settings'], (res) => {
     settings = { ...settings, ...(res.ytf_settings || {}) };
-    debouncedScan(); // Initial scan
+    debouncedScan();
   });
 
   // Listen for setting updates
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'updateFilters') {
+      console.log('Received new settings:', message.settings);
       settings = { ...settings, ...message.settings };
       resetStyles();
-      scanVideos();
+      scanVideos(); // Immediate scan for new settings
+      sendResponse({ status: 'Settings applied' });
     }
   });
 
@@ -180,11 +182,11 @@
         });
         if (isMajorChange) {
           handleContentChange();
-          return; // Exit early to avoid redundant scans
+          return;
         }
       }
     }
-    debouncedScan(); // Handle smaller changes (e.g., scrolling)
+    debouncedScan();
   });
 
   // Start observing
@@ -203,7 +205,7 @@
       startObserver();
       debouncedScan();
     } else {
-      setTimeout(initialize, 500); // Retry until elements are present
+      setTimeout(initialize, 500);
     }
   };
 

@@ -1,9 +1,9 @@
 const DEFAULTS = {
-  minDurationMinutes: 10, // Matches content.js MIN_DURATION_MINUTES
-  maxDurationMinutes: 120, // Matches content.js MAX_DURATION_MINUTES
-  titleKeywords: ['Mix', 'Trailer', 'Teaser'], // Matches content.js TITLE_KEYWORDS
-  hideUnknownDurations: true, // Matches content.js FILTER_NO_DURATION
-  hideStyle: 'hide' // Matches content.js HIDE_STYLE
+  minDurationMinutes: 10,
+  maxDurationMinutes: 120,
+  titleKeywords: ['Mix', 'Trailer', 'Teaser'],
+  hideUnknownDurations: true,
+  hideStyle: 'hide'
 };
 
 const els = {
@@ -20,17 +20,26 @@ const load = () => {
   chrome.storage.sync.get(['ytf_settings'], (res) => {
     const s = { ...DEFAULTS, ...(res.ytf_settings || {}) };
     els.min.value = s.minDurationMinutes;
-    els.max.value = s.maxDurationMinutes || ''; // Empty for null (no max)
+    els.max.value = s.maxDurationMinutes || '';
     els.keywords.value = s.titleKeywords.join(', ');
     els.hideUnknown.checked = s.hideUnknownDurations;
     els.hideStyle.value = s.hideStyle;
   });
 };
 
-const save = () => {
+// Debounce function for real-time updates
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+const saveSettings = () => {
   const min = Math.max(0, Number(els.min.value) || 0);
   const maxInput = Number(els.max.value);
-  const max = Number.isFinite(maxInput) && maxInput > 0 ? maxInput : null; // null for no max
+  const max = Number.isFinite(maxInput) && maxInput > 0 ? maxInput : null;
   const keywords = els.keywords.value
     .split(',')
     .map(s => s.trim())
@@ -47,19 +56,39 @@ const save = () => {
   };
 
   chrome.storage.sync.set({ ytf_settings }, () => {
-    // Notify all YouTube tabs to reapply filters
+    // Send update to all YouTube tabs
     chrome.runtime.sendMessage({ action: 'updateFilters', settings: ytf_settings });
-    window.close();
   });
+
+  return ytf_settings;
+};
+
+// Debounced version for real-time updates
+const debouncedSave = debounce(() => {
+  const settings = saveSettings();
+  chrome.runtime.sendMessage({ action: 'updateFilters', settings });
+}, 500);
+
+const save = () => {
+  saveSettings();
+  window.close();
 };
 
 const reset = () => {
   chrome.storage.sync.set({ ytf_settings: { ...DEFAULTS } }, () => {
-    load(); // Refresh UI
+    load();
     chrome.runtime.sendMessage({ action: 'updateFilters', settings: DEFAULTS });
   });
 };
 
+// Add real-time listeners
+els.min.addEventListener('input', debouncedSave);
+els.max.addEventListener('input', debouncedSave);
+els.keywords.addEventListener('input', debouncedSave);
+els.hideUnknown.addEventListener('change', debouncedSave);
+els.hideStyle.addEventListener('change', debouncedSave);
+
+// Save and close on button click
 els.save.addEventListener('click', save);
 els.reset.addEventListener('click', reset);
 
