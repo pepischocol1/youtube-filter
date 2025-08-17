@@ -35,6 +35,7 @@ youtube-filter/
 │  ├─ popup.html
 │  └─ popup.js
 ├─ src/
-│  ├─ content.js
+│  └─ content.js
+├─ background.js
 ├─ manifest.json
 └─ README.md
