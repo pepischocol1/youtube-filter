@@ -36,10 +36,5 @@ youtube-filter/
 │  └─ popup.js
 ├─ src/
 │  ├─ content.js
-│  ├─ utils.js
-│  ├─ dom.js
-│  ├─ filter.js
-│  ├─ observer.js
-│  └─ storage.js
 ├─ manifest.json
 └─ README.md
