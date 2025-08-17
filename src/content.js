@@ -112,7 +112,7 @@
         }
 
         console.log(
-          `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED' : '⛔️ HIDDEN') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
+          `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED GANDALF' : '⛔️ HIDDEN GANDALF') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
           (tooShort ? ` | ⏱ under ${settings.minDurationMinutes} min` : '') +
           (tooLong ? ` | ⏱ over ${settings.maxDurationMinutes} min` : '') +
           (titleMatch ? ` | 📝 matched keyword` : '') +
@@ -125,33 +125,35 @@
 
       if (count > 0) {
         console.log(`✅ Processed ${count} new videos (min: ${settings.minDurationMinutes} min, max: ${settings.maxDurationMinutes || 'none'} min, keywords: ${settings.titleKeywords.join(', ')}, style: ${settings.hideStyle}, hideUnknown: ${settings.hideUnknownDurations})`);
+      } else if (videos.length > 0) {
+        console.log(`🔄 No new videos to process, but ${videos.length} videos exist on page.`);
       }
     } catch (e) {
       console.error('Error in scanVideos:', e);
     }
   };
 
-  // Debounce function to prevent rapid scans
-  const debounce = (func, wait) => {
-    let timeout;
-    return (...args) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
+  // Debounce function with reset
+  let scanTimeout = null;
+  const debouncedScan = () => {
+    clearTimeout(scanTimeout);
+    scanTimeout = setTimeout(() => {
+      resetStyles(); // Reset all styles before scanning
+      scanVideos();
+    }, 250); // 250ms delay to let DOM settle
   };
 
-  const debouncedScan = debounce(scanVideos, 500); // 500ms debounce
-
-  // Reset and scan after topic switch
-  const handleTopicSwitch = () => {
+  // Handle topic switch or major content change
+  const handleContentChange = () => {
     resetStyles();
-    debouncedScan(); // Delayed to ensure DOM is updated
+    scanVideos(); // Immediate scan for initial elements
+    setTimeout(scanVideos, 500); // Additional scan for partial loads
   };
 
   // Load initial settings
   chrome.storage.sync.get(['ytf_settings'], (res) => {
     settings = { ...settings, ...(res.ytf_settings || {}) };
-    scanVideos(); // Initial scan
+    debouncedScan(); // Initial scan
   });
 
   // Listen for setting updates
@@ -163,30 +165,43 @@
     }
   });
 
-  // Observe topic bar for changes
-  const topicObserver = new MutationObserver(() => {
-    handleTopicSwitch();
-  });
-
-  // Observe general DOM for new video elements
-  const videoObserver = new MutationObserver(() => {
-    debouncedScan();
+  // Observe topic bar and video grid
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.addedNodes.length > 0) {
+        const isMajorChange = Array.from(mutation.addedNodes).some(node => {
+          return node.nodeType === 1 && (
+            node.tagName === 'YTD-RICH-GRID-RENDERER' ||
+            node.tagName === 'YTD-ITEM-SECTION-RENDERER' ||
+            node.id === 'contents' ||
+            node.tagName === 'YTD-CHIP-CLOUD-RENDERER' ||
+            node.querySelector?.('ytd-chip-cloud-renderer')
+          );
+        });
+        if (isMajorChange) {
+          handleContentChange();
+          return; // Exit early to avoid redundant scans
+        }
+      }
+    }
+    debouncedScan(); // Handle smaller changes (e.g., scrolling)
   });
 
   // Start observing
-  const startObservers = () => {
-    const topicBar = document.querySelector('ytd-chip-cloud-renderer');
-    if (topicBar) {
-      topicObserver.observe(topicBar, { childList: true, subtree: true });
+  const startObserver = () => {
+    const gridContainer = document.querySelector('ytd-rich-grid-renderer');
+    if (gridContainer) {
+      observer.observe(gridContainer, { childList: true, subtree: true });
+    } else {
+      observer.observe(document.body, { childList: true, subtree: true });
     }
-    videoObserver.observe(document.body, { childList: true, subtree: true });
   };
 
   // Wait for page to load
   const initialize = () => {
-    if (document.querySelector('ytd-chip-cloud-renderer') || document.querySelector(selectors.join(','))) {
-      startObservers();
-      scanVideos();
+    if (document.querySelector('ytd-rich-grid-renderer, ytd-chip-cloud-renderer') || document.querySelector(selectors.join(','))) {
+      startObserver();
+      debouncedScan();
     } else {
       setTimeout(initialize, 500); // Retry until elements are present
     }
