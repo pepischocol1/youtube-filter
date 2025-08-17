@@ -1,4 +1,5 @@
 // YouTube Filter (Duration & Keywords) - content script with enhanced diagnostics
+// This is add-filter-options branch
 
 (() => {
   // -------- Debug utilities --------
