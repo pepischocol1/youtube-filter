@@ -7,8 +7,7 @@
     "default_title": "YouTube Filter",
     "default_popup": "popup/popup.html"
   },
-  "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": ["https://www.youtube.com/*"],
+  "permissions": ["storage", "scripting"],
   "icons": {
     "16": "assets/icon16.png",
     "48": "assets/icon48.png",
@@ -16,7 +15,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.youtube.com/*", "http://*.youtube.com/*"],
+      "matches": ["https://www.youtube.com/*"],
       "js": [
         "src/utils.js",
         "src/dom.js",
