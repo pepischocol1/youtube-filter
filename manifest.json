@@ -7,11 +7,8 @@
     "default_title": "YouTube Filter",
     "default_popup": "popup/popup.html"
   },
-  "permissions": ["storage"],
-  "host_permissions": [
-    "https://www.youtube.com/*",
-    "http://www.youtube.com/*"
-  ],
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://www.youtube.com/*"],
   "icons": {
     "16": "assets/icon16.png",
     "48": "assets/icon48.png",
@@ -19,8 +16,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://www.youtube.com/*"],
-      "js": ["src/content.js"],
+      "matches": ["https://*.youtube.com/*", "http://*.youtube.com/*"],
+      "js": [
+        "src/utils.js",
+        "src/dom.js",
+        "src/filter.js",
+        "src/observer.js",
+        "src/storage.js",
+        "src/content.js"
+      ],
       "run_at": "document_idle"
     }
   ]
