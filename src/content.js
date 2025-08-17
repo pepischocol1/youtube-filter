@@ -65,10 +65,12 @@
   const applyStyle = (el, mode) => {
     if (mode === 'hide') {
       el.style.display = 'none';
+      el.setAttribute('aria-hidden', 'true');
     } else if (mode === 'gray') {
       el.style.opacity = '0.4';
       el.style.pointerEvents = 'none';
       el.style.filter = 'grayscale(100%)';
+      el.setAttribute('aria-hidden', 'true');
     }
   };
 
@@ -79,49 +81,71 @@
       el.style.opacity = '';
       el.style.pointerEvents = '';
       el.style.filter = '';
+      el.removeAttribute('aria-hidden');
       el.dataset.scanned = '0'; // Mark for reprocessing
     });
   };
 
   const scanVideos = () => {
-    const videos = document.querySelectorAll(selectors.join(','));
-    let count = 0;
+    try {
+      const videos = document.querySelectorAll(selectors.join(','));
+      let count = 0;
 
-    videos.forEach((el) => {
-      if (el.dataset.scanned === '1') return;
+      videos.forEach((el) => {
+        if (el.dataset.scanned === '1') return;
 
-      const title = extractTitle(el);
-      const durationText = extractDuration(el);
-      const seconds = parseDurationToSeconds(durationText);
+        const title = extractTitle(el);
+        const durationText = extractDuration(el);
+        const seconds = parseDurationToSeconds(durationText);
 
-      const tooShort = Number.isFinite(seconds) && seconds < settings.minDurationMinutes * 60;
-      const tooLong = Number.isFinite(seconds) && settings.maxDurationMinutes !== null && seconds > settings.maxDurationMinutes * 60;
-      const titleMatch = settings.titleKeywords.some((word) =>
-        title.toLowerCase().includes(word.toLowerCase())
-      );
-      const noDuration = !Number.isFinite(seconds);
+        const tooShort = Number.isFinite(seconds) && seconds < settings.minDurationMinutes * 60;
+        const tooLong = Number.isFinite(seconds) && settings.maxDurationMinutes !== null && seconds > settings.maxDurationMinutes * 60;
+        const titleMatch = settings.titleKeywords.some((word) =>
+          title.toLowerCase().includes(word.toLowerCase())
+        );
+        const noDuration = !Number.isFinite(seconds);
 
-      let caught = false;
-      if (tooShort || tooLong || titleMatch || (settings.hideUnknownDurations && noDuration)) {
-        applyStyle(el, settings.hideStyle);
-        caught = true;
+        let caught = false;
+        if (tooShort || tooLong || titleMatch || (settings.hideUnknownDurations && noDuration)) {
+          applyStyle(el, settings.hideStyle);
+          caught = true;
+        }
+
+        console.log(
+          `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED' : '⛔️ HIDDEN') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
+          (tooShort ? ` | ⏱ under ${settings.minDurationMinutes} min` : '') +
+          (tooLong ? ` | ⏱ over ${settings.maxDurationMinutes} min` : '') +
+          (titleMatch ? ` | 📝 matched keyword` : '') +
+          (noDuration ? ` | ❓ no/invalid duration` : '')
+        );
+
+        el.dataset.scanned = '1';
+        count++;
+      });
+
+      if (count > 0) {
+        console.log(`✅ Processed ${count} new videos (min: ${settings.minDurationMinutes} min, max: ${settings.maxDurationMinutes || 'none'} min, keywords: ${settings.titleKeywords.join(', ')}, style: ${settings.hideStyle}, hideUnknown: ${settings.hideUnknownDurations})`);
       }
-
-      console.log(
-        `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED' : '⛔️ HIDDEN') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
-        (tooShort ? ` | ⏱ under ${settings.minDurationMinutes} min` : '') +
-        (tooLong ? ` | ⏱ over ${settings.maxDurationMinutes} min` : '') +
-        (titleMatch ? ` | 📝 matched keyword` : '') +
-        (noDuration ? ` | ❓ no/invalid duration` : '')
-      );
-
-      el.dataset.scanned = '1';
-      count++;
-    });
-
-    if (count > 0) {
-      console.log(`✅ Processed ${count} new videos (min: ${settings.minDurationMinutes} min, max: ${settings.maxDurationMinutes} min, keywords: ${settings.titleKeywords.join(', ')}, style: ${settings.hideStyle}, hideUnknown: ${settings.hideUnknownDurations})`);
+    } catch (e) {
+      console.error('Error in scanVideos:', e);
     }
+  };
+
+  // Debounce function to prevent rapid scans
+  const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  const debouncedScan = debounce(scanVideos, 500); // 500ms debounce
+
+  // Reset and scan after topic switch
+  const handleTopicSwitch = () => {
+    resetStyles();
+    debouncedScan(); // Delayed to ensure DOM is updated
   };
 
   // Load initial settings
@@ -134,14 +158,39 @@
   chrome.runtime.onMessage.addListener((message) => {
     if (message.action === 'updateFilters') {
       settings = { ...settings, ...message.settings };
-      resetStyles(); // Clear existing styles
-      scanVideos(); // Reapply filters
+      resetStyles();
+      scanVideos();
     }
   });
 
-  // Use MutationObserver for dynamic content
-  const observer = new MutationObserver(() => {
-    scanVideos();
+  // Observe topic bar for changes
+  const topicObserver = new MutationObserver(() => {
+    handleTopicSwitch();
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Observe general DOM for new video elements
+  const videoObserver = new MutationObserver(() => {
+    debouncedScan();
+  });
+
+  // Start observing
+  const startObservers = () => {
+    const topicBar = document.querySelector('ytd-chip-cloud-renderer');
+    if (topicBar) {
+      topicObserver.observe(topicBar, { childList: true, subtree: true });
+    }
+    videoObserver.observe(document.body, { childList: true, subtree: true });
+  };
+
+  // Wait for page to load
+  const initialize = () => {
+    if (document.querySelector('ytd-chip-cloud-renderer') || document.querySelector(selectors.join(','))) {
+      startObservers();
+      scanVideos();
+    } else {
+      setTimeout(initialize, 500); // Retry until elements are present
+    }
+  };
+
+  initialize();
 })();

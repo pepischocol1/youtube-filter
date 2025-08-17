@@ -7,7 +7,7 @@
     "default_title": "YouTube Filter",
     "default_popup": "popup/popup.html"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "http://www.youtube.com/*"
