@@ -1,14 +1,13 @@
 // YouTube Filter (Duration & Keywords) - content script with enhanced diagnostics
-// NEW-FILTER-OPTIONS
-
 (() => {
-  // --- CONFIG ---
-  const MIN_DURATION_MINUTES = 10; // hide if shorter than this
-  const MAX_DURATION_MINUTES = 120; // hide if longer than this (set null to disable)
-  const TITLE_KEYWORDS = ['Mix', 'Trailer', 'Teaser']; // case-insensitive
-
-  const HIDE_STYLE = 'hide'; // 'hide' or 'gray'
-  const FILTER_NO_DURATION = true; // true = filter them, false = ignore them
+  // Default settings (fallback if storage is empty)
+  let settings = {
+    minDurationMinutes: 10,
+    maxDurationMinutes: 120,
+    titleKeywords: ['Mix', 'Trailer', 'Teaser'],
+    hideStyle: 'hide',
+    hideUnknownDurations: true
+  };
 
   const getText = (el) => (el?.textContent || '').trim();
   const selectors = [
@@ -73,6 +72,17 @@
     }
   };
 
+  const resetStyles = () => {
+    const videos = document.querySelectorAll(selectors.join(','));
+    videos.forEach((el) => {
+      el.style.display = '';
+      el.style.opacity = '';
+      el.style.pointerEvents = '';
+      el.style.filter = '';
+      el.dataset.scanned = '0'; // Mark for reprocessing
+    });
+  };
+
   const scanVideos = () => {
     const videos = document.querySelectorAll(selectors.join(','));
     let count = 0;
@@ -84,23 +94,23 @@
       const durationText = extractDuration(el);
       const seconds = parseDurationToSeconds(durationText);
 
-      const tooShort = Number.isFinite(seconds) && seconds < MIN_DURATION_MINUTES * 60;
-      const tooLong = Number.isFinite(seconds) && MAX_DURATION_MINUTES !== null && seconds > MAX_DURATION_MINUTES * 60;
-      const titleMatch = TITLE_KEYWORDS.some((word) =>
+      const tooShort = Number.isFinite(seconds) && seconds < settings.minDurationMinutes * 60;
+      const tooLong = Number.isFinite(seconds) && settings.maxDurationMinutes !== null && seconds > settings.maxDurationMinutes * 60;
+      const titleMatch = settings.titleKeywords.some((word) =>
         title.toLowerCase().includes(word.toLowerCase())
       );
       const noDuration = !Number.isFinite(seconds);
 
       let caught = false;
-      if (tooShort || tooLong || titleMatch || (FILTER_NO_DURATION && noDuration)) {
-        applyStyle(el, HIDE_STYLE);
+      if (tooShort || tooLong || titleMatch || (settings.hideUnknownDurations && noDuration)) {
+        applyStyle(el, settings.hideStyle);
         caught = true;
       }
 
       console.log(
-        `${caught ? (HIDE_STYLE === 'gray' ? '⚠️ GRAYED' : '⛔️ HIDDEN') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
-        (tooShort ? ` | ⏱ under ${MIN_DURATION_MINUTES} min` : '') +
-        (tooLong ? ` | ⏱ over ${MAX_DURATION_MINUTES} min` : '') +
+        `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED' : '⛔️ HIDDEN') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
+        (tooShort ? ` | ⏱ under ${settings.minDurationMinutes} min` : '') +
+        (tooLong ? ` | ⏱ over ${settings.maxDurationMinutes} min` : '') +
         (titleMatch ? ` | 📝 matched keyword` : '') +
         (noDuration ? ` | ❓ no/invalid duration` : '')
       );
@@ -110,9 +120,28 @@
     });
 
     if (count > 0) {
-      console.log(`✅ Processed ${count} new videos (min: ${MIN_DURATION_MINUTES} min, max: ${MAX_DURATION_MINUTES} min, keywords: ${TITLE_KEYWORDS.join(', ')}, style: ${HIDE_STYLE}, filterNoDuration: ${FILTER_NO_DURATION})`);
+      console.log(`✅ Processed ${count} new videos (min: ${settings.minDurationMinutes} min, max: ${settings.maxDurationMinutes} min, keywords: ${settings.titleKeywords.join(', ')}, style: ${settings.hideStyle}, hideUnknown: ${settings.hideUnknownDurations})`);
     }
   };
 
-  setInterval(scanVideos, 2000);
+  // Load initial settings
+  chrome.storage.sync.get(['ytf_settings'], (res) => {
+    settings = { ...settings, ...(res.ytf_settings || {}) };
+    scanVideos(); // Initial scan
+  });
+
+  // Listen for setting updates
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === 'updateFilters') {
+      settings = { ...settings, ...message.settings };
+      resetStyles(); // Clear existing styles
+      scanVideos(); // Reapply filters
+    }
+  });
+
+  // Use MutationObserver for dynamic content
+  const observer = new MutationObserver(() => {
+    scanVideos();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 })();

@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -11,25 +11,33 @@
 
       <section>
         <label>
-          <span>Min duration (seconds)</span>
-          <input type="number" id="minDurationSec" min="0" step="1" placeholder="0" />
+          <span>Min duration (minutes)</span>
+          <input type="number" id="minDurationMinutes" min="0" step="1" placeholder="10" />
         </label>
 
         <label>
-          <span>Max duration (seconds)</span>
-          <input type="number" id="maxDurationSec" min="0" step="1" placeholder="86400" />
+          <span>Max duration (minutes, leave empty for no limit)</span>
+          <input type="number" id="maxDurationMinutes" min="0" step="1" placeholder="120" />
         </label>
 
         <label class="checkbox">
           <input type="checkbox" id="hideUnknownDurations" />
-          <span>Hide videos with unknown duration (LIVE/Shorts)</span>
+          <span>Hide videos with unknown duration (LIVE, Shorts, Premiere)</span>
+        </label>
+
+        <label>
+          <span>Hide style</span>
+          <select id="hideStyle">
+            <option value="hide">Hide completely</option>
+            <option value="gray">Gray out</option>
+          </select>
         </label>
       </section>
 
       <section>
         <label>
           <span>Blocked keywords (comma-separated)</span>
-          <textarea id="bannedKeywords" rows="3" placeholder="reaction, spoiler, compilation"></textarea>
+          <textarea id="titleKeywords" rows="3" placeholder="Mix, Trailer, Teaser"></textarea>
         </label>
       </section>
 
@@ -38,7 +46,7 @@
         <button id="save" class="primary">Save</button>
       </div>
 
-      <p class="hint">Changes apply automatically to open YouTube tabs.</p>
+      <p class="hint">Changes apply to open YouTube tabs after saving.</p>
     </div>
 
     <script src="popup.js"></script>
