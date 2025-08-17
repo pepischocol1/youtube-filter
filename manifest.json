@@ -1,0 +1,27 @@
+{
+  "name": "YouTube Filter (Duration & Keywords)",
+  "description": "Hide YouTube videos by duration and title keywords.",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "action": {
+    "default_title": "YouTube Filter",
+    "default_popup": "popup/popup.html"
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "http://www.youtube.com/*"
+  ],
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://www.youtube.com/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

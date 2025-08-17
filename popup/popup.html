@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>YouTube Filter</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>YouTube Filter</h1>
+
+      <section>
+        <label>
+          <span>Min duration (seconds)</span>
+          <input type="number" id="minDurationSec" min="0" step="1" placeholder="0" />
+        </label>
+
+        <label>
+          <span>Max duration (seconds)</span>
+          <input type="number" id="maxDurationSec" min="0" step="1" placeholder="86400" />
+        </label>
+
+        <label class="checkbox">
+          <input type="checkbox" id="hideUnknownDurations" />
+          <span>Hide videos with unknown duration (LIVE/Shorts)</span>
+        </label>
+      </section>
+
+      <section>
+        <label>
+          <span>Blocked keywords (comma-separated)</span>
+          <textarea id="bannedKeywords" rows="3" placeholder="reaction, spoiler, compilation"></textarea>
+        </label>
+      </section>
+
+      <div class="buttons">
+        <button id="reset">Reset</button>
+        <button id="save" class="primary">Save</button>
+      </div>
+
+      <p class="hint">Changes apply automatically to open YouTube tabs.</p>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
