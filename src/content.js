@@ -1,14 +1,14 @@
-(() => {
-  const { log } = window.ytfUtils || {};
+(function() {
+  // Initialize namespaces to ensure they're defined
+  window.ytfUtils = window.ytfUtils || {};
+  window.ytfDom = window.ytfDom || {};
+  window.ytfFilter = window.ytfFilter || { settings: {}, DEFAULTS: {} };
+  window.ytfObserver = window.ytfObserver || {};
+  window.ytfStorage = window.ytfStorage || {};
+
+  const { log } = window.ytfUtils;
 
   log("Content script loaded", { url: location.href, ts: new Date().toISOString() });
-
-  // Expose utilities globally
-  window.ytfUtils = { log, warn, dbg, getText, parseDurationToSeconds, debounce };
-  window.ytfDom = { extractTitle, extractDurationText, processRenderer, diagnoseDOM, allVideoSelectors };
-  window.ytfFilter = { shouldHide, getHideReason, settings: window.ytfFilter?.settings || {}, DEFAULTS };
-  window.ytfObserver = { scanAndFilter, reapplyFilter, startObserver, stopObserver, initUrlWatcher };
-  window.ytfStorage = { loadSettings, watchStorage };
 
   const initialScanWithRetries = (maxAttempts = 15, delayMs = 300) => {
     let attempts = 0;
@@ -16,7 +16,7 @@
       const count = window.ytfObserver.scanAndFilter();
       if (count === 0 && attempts < maxAttempts) {
         attempts += 1;
-        warn(`initialScan: no nodes found (attempt ${attempts}/${maxAttempts})`);
+        window.ytfUtils.warn(`initialScan: no nodes found (attempt ${attempts}/${maxAttempts})`);
         setTimeout(tryScan, delayMs);
       } else {
         log("initialScan: completed", { count, attempts });
