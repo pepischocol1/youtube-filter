@@ -1,4 +1,4 @@
-// YouTube Filter (Duration & Keywords) - content script with enhanced diagnostics
+// YouTube Filter (Duration, Keywords & Watched) - content script with enhanced diagnostics
 (() => {
   // Default settings (fallback if storage is empty)
   let settings = {
@@ -6,7 +6,8 @@
     maxDurationMinutes: 120,
     titleKeywords: ['Mix', 'Trailer', 'Teaser'],
     hideStyle: 'hide',
-    hideUnknownDurations: true
+    hideUnknownDurations: true,
+    watchedThreshold: 5
   };
 
   const getText = (el) => (el?.textContent || '').trim();
@@ -62,6 +63,31 @@
     return NaN;
   };
 
+  const getWatchedStatus = (el) => {
+    let pct = null;
+
+    // New structure: progress bar segment with inline width
+    const prog = el.querySelector('.ytThumbnailOverlayProgressBarHostWatchedProgressBarSegment');
+    if (prog) {
+      const w = prog.style?.width || '';
+      if (w.endsWith('%')) pct = parseFloat(w);
+    }
+
+    // Fallback to old #progress element if present
+    if (pct === null) {
+      const oldProg = el.querySelector('ytd-thumbnail-overlay-resume-playback-renderer #progress');
+      if (oldProg) {
+        const w = oldProg.style?.width || '';
+        if (w.endsWith('%')) pct = parseFloat(w);
+      }
+    }
+
+    if (pct === null) return { label: 'Not watched', pct: 0 };
+    if (pct >= 99) return { label: 'Watched 100%', pct };
+    if (pct > 0) return { label: `Watched ~${pct}%`, pct };
+    return { label: 'Not watched', pct: 0 };
+  };
+
   const applyStyle = (el, mode) => {
     if (mode === 'hide') {
       el.style.display = 'none';
@@ -97,6 +123,7 @@
         const title = extractTitle(el);
         const durationText = extractDuration(el);
         const seconds = parseDurationToSeconds(durationText);
+        const watchedInfo = getWatchedStatus(el);
 
         const tooShort = Number.isFinite(seconds) && seconds < settings.minDurationMinutes * 60;
         const tooLong = Number.isFinite(seconds) && settings.maxDurationMinutes !== null && seconds > settings.maxDurationMinutes * 60;
@@ -105,26 +132,46 @@
         );
         const noDuration = !Number.isFinite(seconds);
 
-        let caught = false;
-        if (tooShort || tooLong || titleMatch || (settings.hideUnknownDurations && noDuration)) {
+        const filterReasons = [];
+        if (tooShort) filterReasons.push(`⏱ under ${settings.minDurationMinutes} min`);
+        if (tooLong) filterReasons.push(`⏱ over ${settings.maxDurationMinutes} min`);
+        if (titleMatch) filterReasons.push(`📝 matched keyword`);
+        if (settings.hideUnknownDurations && noDuration) filterReasons.push(`❓ no/invalid duration`);
+
+        const hasFilterCatch = filterReasons.length > 0;
+        const hasWatchedCatch = watchedInfo.pct >= settings.watchedThreshold;
+
+        let logPrefix = '🎬';
+        let appliedStyle = null;
+
+        if (hasFilterCatch) {
           applyStyle(el, settings.hideStyle);
-          caught = true;
+          appliedStyle = settings.hideStyle;
+          logPrefix = settings.hideStyle === 'gray' ? '⚠️ GRAYED DEVIL' : '⛔️ HIDDEN DEVIL';
+        } else if (hasWatchedCatch) {
+          applyStyle(el, 'gray'); // Always gray for watched
+          appliedStyle = 'gray';
+          logPrefix = '⚠️ GRAYED WATCHED';
         }
 
-        console.log(
-          `${caught ? (settings.hideStyle === 'gray' ? '⚠️ GRAYED DEVIL' : '⛔️ HIDDEN DEVIL') : '🎬'} [${count + 1}] "${title}" | ${durationText}` +
-          (tooShort ? ` | ⏱ under ${settings.minDurationMinutes} min` : '') +
-          (tooLong ? ` | ⏱ over ${settings.maxDurationMinutes} min` : '') +
-          (titleMatch ? ` | 📝 matched keyword` : '') +
-          (noDuration ? ` | ❓ no/invalid duration` : '')
-        );
+        let logMessage = `${logPrefix} [${count + 1}] "${title}" | ${durationText}`;
+        if (filterReasons.length > 0) {
+          logMessage += ` | ${filterReasons.join(' | ')}`;
+        }
+        if (hasWatchedCatch) {
+          logMessage += ` | 👀 ${watchedInfo.label}`;
+        } else {
+          logMessage += ` | 👀 ${watchedInfo.label}`;
+        }
+
+        console.log(logMessage);
 
         el.dataset.scanned = '1';
         count++;
       });
 
       if (count > 0) {
-        console.log(`✅ Processed ${count} new videos (min: ${settings.minDurationMinutes} min, max: ${settings.maxDurationMinutes || 'none'} min, keywords: ${settings.titleKeywords.join(', ')}, style: ${settings.hideStyle}, hideUnknown: ${settings.hideUnknownDurations})`);
+        console.log(`✅ Processed ${count} new videos (min: ${settings.minDurationMinutes} min, max: ${settings.maxDurationMinutes || 'none'} min, keywords: ${settings.titleKeywords.join(', ')}, watched threshold: ${settings.watchedThreshold}%, style: ${settings.hideStyle}, hideUnknown: ${settings.hideUnknownDurations})`);
       } else if (videos.length > 0) {
         console.log(`🔄 No new videos to process, but ${videos.length} videos exist on page.`);
       }
