@@ -5,9 +5,9 @@
     minDurationMinutes: 10,
     maxDurationMinutes: 120,
     titleKeywords: ['Mix', 'Trailer', 'Teaser'],
-    hideStyle: 'hide',
+    hideStyle: 'gray',
     hideUnknownDurations: true,
-    watchedThreshold: 5
+    watchedThreshold: 10,
   };
 
   const getText = (el) => (el?.textContent || '').trim();
@@ -15,7 +15,7 @@
     'ytd-video-renderer',
     'ytd-rich-item-renderer',
     'ytd-grid-video-renderer',
-    'ytd-compact-video-renderer'
+    'ytd-compact-video-renderer',
   ];
 
   const extractTitle = (el) => {
@@ -25,13 +25,14 @@
 
   const extractDuration = (el) => {
     const candidates = [
+      '.yt-badge-shape__text', // NEW: Updated selector for the duration element
       'ytd-thumbnail-overlay-time-status-renderer',
       '.ytd-thumbnail-overlay-time-status-renderer',
       '#time-status',
       'span.ytd-thumbnail-overlay-time-status-renderer',
       '[aria-label*="duration"]',
       'span[aria-label]',
-      '.badge-shape-wiz__text'
+      '.badge-shape-wiz__text',
     ];
     for (const selector of candidates) {
       const durEl = el.querySelector(selector);
@@ -161,7 +162,7 @@
         if (hasWatchedCatch) {
           logMessage += ` | 👀 ${watchedInfo.label}`;
         } else {
-          logMessage += ` | 👀 ${watchedInfo.label}`;
+            logMessage += ` | 👀 ${watchedInfo.label}`;
         }
 
         console.log(logMessage);
