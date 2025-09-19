@@ -1,2 +1,3 @@
 package-lock.json
 dist/content.js
+node_modules/.package-lock.json
