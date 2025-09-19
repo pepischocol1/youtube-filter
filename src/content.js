@@ -42,10 +42,22 @@ chrome.runtime.onMessage.addListener((msg, sender, resp) => {
   }
 });
 
-// Watch for dynamic content
+// Watch for dynamic content — restrict observer sensitivity
 startObserver(muts => {
   const major = muts.some(m => Array.from(m.addedNodes).some(n =>
-    n.nodeType === 1 && ['YTD-RICH-GRID-RENDERER','YTD-ITEM-SECTION-RENDERER','contents'].includes(n.tagName || n.id)
+    n.nodeType === 1 && (
+      n.tagName === 'YTD-RICH-GRID-RENDERER' ||
+      n.tagName === 'YTD-ITEM-SECTION-RENDERER' ||
+      n.id === 'contents'
+    )
   ));
-  major ? handleMajorChange() : debouncedProcess();
+  if (major) {
+    handleMajorChange();
+  } else {
+    // Only trigger if actual video elements were added
+    const videoAdded = muts.some(m => Array.from(m.addedNodes).some(n =>
+      n.nodeType === 1 && n.matches && n.matches('ytd-video-renderer, ytd-rich-item-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer')
+    ));
+    if (videoAdded) debouncedProcess();
+  }
 });
