@@ -1,0 +1,24 @@
+{
+  "name": "youtube-filter-v2.0",
+  "version": "1.0.0",
+  "description": "Hide YouTube videos that don't match your duration range or contain blocked keywords in the title.",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild src/content.js --bundle --format=iife --global-name=YouTubeFilter --outfile=dist/content.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pepischocol1/youtube-filter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pepischocol1/youtube-filter/issues"
+  },
+  "homepage": "https://github.com/pepischocol1/youtube-filter#readme",
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  }
+}
