@@ -13,3 +13,25 @@ export function parseDurationToSeconds(text) {
   if (parts.length === 2) return parts[0] * 60 + parts[1];
   return NaN;
 }
+
+/**
+ * Convert a relative date string like "5 hours ago" into a timestamp.
+ */
+export function parseRelativeDate(dateString) {
+  if (!dateString) return 0;
+  const now = new Date();
+  const [valueRaw, unitRaw] = dateString.toLowerCase().split(' ');
+  const value = parseInt(valueRaw, 10);
+  if (isNaN(value)) return 0;
+
+  if (unitRaw.includes('second'))       now.setSeconds(now.getSeconds() - value);
+  else if (unitRaw.includes('minute'))  now.setMinutes(now.getMinutes() - value);
+  else if (unitRaw.includes('hour'))    now.setHours(now.getHours() - value);
+  else if (unitRaw.includes('day'))     now.setDate(now.getDate() - value);
+  else if (unitRaw.includes('week'))    now.setDate(now.getDate() - 7 * value);
+  else if (unitRaw.includes('month'))   now.setMonth(now.getMonth() - value);
+  else if (unitRaw.includes('year'))    now.setFullYear(now.getFullYear() - value);
+  else                                   return 0;
+
+  return now.getTime();
+}

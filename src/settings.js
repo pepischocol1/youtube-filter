@@ -4,7 +4,8 @@ export const defaultSettings = {
   titleKeywords: ['Mix', 'Trailer', 'Teaser'],
   hideStyle: 'gray',
   hideUnknownDurations: true,
-  watchedThreshold: 10
+  watchedThreshold: 10,
+  sortByDate: true   // new setting for date-based sorting
 };
 
 export function loadSettings() {

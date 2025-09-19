@@ -74,13 +74,25 @@ export function applyStyle(el, mode) {
 }
 
 export function resetStyles() {
-  const videos = document.querySelectorAll(selectors.join(','));
-  videos.forEach(el => {
+  document.querySelectorAll(selectors.join(',')).forEach(el => {
     el.style.display = '';
     el.style.opacity = '';
     el.style.pointerEvents = '';
     el.style.filter = '';
     el.removeAttribute('aria-hidden');
-    el.dataset.scanned = '0';
+    delete el.dataset.scanned;
+    el.style.order = '';
   });
+}
+
+/**
+ * Extract the "X ago" upload date text from a video element.
+ */
+export function extractUploadDate(el) {
+  let dateText = null;
+  el.querySelectorAll('.yt-content-metadata-view-model__metadata-row span').forEach(span => {
+    const t = span.textContent.trim();
+    if (t.endsWith(' ago')) dateText = t;
+  });
+  return dateText;
 }
