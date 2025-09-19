@@ -9,7 +9,7 @@ export function filterVideos(settings) {
   resetStyles();
   const passed = [];
 
-  document.querySelectorAll(selectors.join(',')).forEach(el => {
+  document.querySelectorAll(selectors.join(',')).forEach((el, idx) => {
     if (el.dataset.scanned === '1') return;
     const title = extractTitle(el);
     const durText = extractDuration(el);
@@ -31,10 +31,21 @@ export function filterVideos(settings) {
     const watchedHit = watched.pct >= settings.watchedThreshold;
 
     if (filtered || watchedHit) {
-      applyStyle(el, filtered ? settings.hideStyle : 'gray');
+      applyStyle(el, settings.hideStyle);
     } else {
       passed.push(el);
     }
+
+    // Verbose logging for debugging decisions
+    const msgParts = [
+      `#${idx + 1}`,
+      `'${title}'`,
+      `duration: ${durText}`,
+      `watched: ${watched.label}`,
+      reasons.length ? `reasons: ${reasons.join(', ')}` : 'no filter reasons',
+      filtered || watchedHit ? `APPLIED: ${settings.hideStyle}` : 'PASSED'
+    ];
+    console.log('[YouTubeFilter]', msgParts.join(' | '));
 
     el.dataset.scanned = '1';
   });
